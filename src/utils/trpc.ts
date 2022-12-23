@@ -2,10 +2,10 @@ import { httpBatchLink } from '@trpc/client/links/httpBatchLink';
 import { loggerLink } from '@trpc/client/links/loggerLink';
 import { wsLink, createWSClient } from '@trpc/client/links/wsLink';
 import { createTRPCNext } from '@trpc/next';
-import type { inferProcedureOutput } from '@trpc/server';
+import * as trpcNext from '@trpc/server';
 import { NextPageContext } from 'next';
 import getConfig from 'next/config';
-import type { AppRouter } from 'server/routers/_app';
+import type { AppRouter } from '../server/routers/_app';
 import superjson from 'superjson';
 
 // ℹ️ Type-only import:
@@ -77,7 +77,7 @@ export const trpc = createTRPCNext<AppRouter>({
   /**
    * @link https://trpc.io/docs/ssr
    */
-  ssr: true,
+  ssr: false,
 });
 
 // export const transformer = superjson;
@@ -87,4 +87,16 @@ export const trpc = createTRPCNext<AppRouter>({
  */
 export type inferQueryOutput<
   TRouteKey extends keyof AppRouter['_def']['queries'],
-> = inferProcedureOutput<AppRouter['_def']['queries'][TRouteKey]>;
+> = trpcNext.inferProcedureOutput<AppRouter['_def']['queries'][TRouteKey]>;
+
+/* eslint-disable */
+/**
+ * Inference helper for inputs
+ * @example type HelloInput = RouterInputs['example']['hello']
+ **/
+export type RouterInputs = trpcNext.inferRouterInputs<AppRouter>;
+/**
+ * Inference helper for outputs
+ * @example type HelloOutput = RouterOutputs['example']['hello']
+ **/
+export type RouterOutputs = trpcNext.inferRouterOutputs<AppRouter>;

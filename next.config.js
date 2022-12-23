@@ -3,6 +3,15 @@
  */
 
 module.exports = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.com',
+        pathname: '/PokeAPI/sprites/master/sprites/pokemon/**',
+      },
+    ],
+  },
   serverRuntimeConfig: {
     // Will only be available on the server side
   },

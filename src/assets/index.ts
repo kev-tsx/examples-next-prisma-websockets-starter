@@ -1,0 +1,1 @@
+export { default as test } from './1657891-00-A_1.jpg';

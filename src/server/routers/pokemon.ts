@@ -3,7 +3,7 @@ import { PokemonClient } from 'pokenode-ts';
 import { z } from 'zod';
 import { prisma } from '../prisma';
 import EventEmitter from 'events';
-import { Pokemon } from '@prisma/client';
+import type { Pokemon } from '@prisma/client';
 import { observable } from '@trpc/server/observable';
 
 interface MyEvents {
@@ -35,47 +35,114 @@ export const pokemonRouter = router({
   getById: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
+      const pokemonInDB = await prisma.pokemon.findUnique({
+        where: { ...input },
+        include: {
+          _count: true,
+          votesFor: {
+            distinct: ['votedAgainst'],
+            include: { pokemonVotedFor: true, pokemonVotedAgainst: true },
+          },
+        },
+      });
+      // pokemonInDB?.votesFor.map(p => p.pokemonV)
+      if (pokemonInDB)
+        return {
+          id: pokemonInDB.id,
+          name: pokemonInDB.name,
+          url: pokemonInDB.url,
+          votesFor: pokemonInDB.votesFor,
+          _count: pokemonInDB._count,
+        };
       const pokemon = await api.getPokemonById(input.id);
       return {
         id: pokemon.id,
         name: pokemon.name,
         url: pokemon.sprites.front_default,
+        votesFor: [],
+        _count: { vote: 0 },
       };
     }),
   setVotes: publicProcedure
-    .input(z.object({ id: z.number(), name: z.string().min(1) }))
+    .input(z.object({ votedFor: z.number(), votedAgainst: z.number() }))
     .mutation(async ({ input }) => {
-      const pokemon_created = await prisma.pokemon.findFirst({
-        where: { name: input.name },
+      /* eslint-disable */
+      const pokemon = await prisma.pokemon.findUnique({
+        where: { id: input.votedFor },
       });
-      if (pokemon_created) {
-        const pokemon = await prisma.pokemon.update({
-          where: { id: pokemon_created.id },
-          data: { rate: pokemon_created.rate + 1 },
+      if (pokemon) {
+        // {
+        //   // const voteExist = await prisma.vote.findFirst({
+        // //   where: {
+        // //     ...input
+        // //   },
+        // // })
+        // // if(voteExist) {
+        // //   await prisma.pokemon.update({
+        // //     where: { id: input.votedFor },
+        // //     data: {
+
+        // //     }
+        // //   });
+        // // }
+        // }
+        await prisma.pokemon.update({
+          where: { id: input.votedFor },
+          data: {
+            ...input
+          }
         });
-
-        ee.emit('vote', pokemon);
-
-        return pokemon;
+        return { success: true };
       }
-      const poke = await api.getPokemonById(input.id);
-
-      const pokemon = await prisma.pokemon.create({
+      const { name, sprites: { front_default }} = await api.getPokemonById(input.votedFor);
+      
+      const poke = await prisma.pokemon.create({
         data: {
-          id: String(input.id),
-          name: poke.name,
-          url: poke.sprites.front_default ?? '',
-          rate: 1,
+          id: input.votedFor,
+          name,
+          url: front_default ?? '',
+          votesFor: { create: { ...input } },
         },
+        include: { votesFor: true },
       });
 
-      ee.emit('vote', pokemon);
-      return pokemon;
+      return { success: true, vote: poke.votesFor, pokemon };
+      // const pokemon_created = await prisma.pokemon.findFirst({
+      //   where: { name: input.name },
+      // });
+      // if (pokemon_created) {
+      //   const pokemon = await prisma.pokemon.update({
+      //     where: { id: pokemon_created.id },
+      //     data: { rate: pokemon_created.rate + 1 },
+      //   });
+
+      //   ee.emit('vote', pokemon);
+
+      //   return pokemon;
+      // }
+      // const poke = await api.getPokemonById(input.votedFor);
+
+      // const pokemon = await prisma.pokemon.create({
+      //   data: {
+      //     id: String(input.id),
+      //     name: poke.name,
+      //     url: poke.sprites.front_default ?? '',
+      //     rate: 1,
+      //   },
+      // });
+
+      // ee.emit('vote', pokemon);
+      // return pokemon;
     }),
   getVotes: publicProcedure.query(async () => {
-    return await prisma.pokemon.findMany({
-      orderBy: { rate: 'desc' },
+    const votes = await prisma.pokemon.findMany({
+      orderBy: {
+        votesFor: { _count: 'desc' },
+      },
+      include: { votesFor: true, votesAgainst: true, _count: true },
     });
+
+    return votes;
   }),
   onSetVotes: publicProcedure.subscription(() => {
     return observable<Pokemon>((emit) => {

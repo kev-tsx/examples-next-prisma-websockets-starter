@@ -12,10 +12,9 @@ export const RootLayout: React.FC<{
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="bg-gray-700 h-screen text-white">
+      <main className="bg-gray-700 text-white h-screen overflow-hidden">
         <Navbar />
-
-        <div>{children}</div>
+        {children}
       </main>
     </>
   );

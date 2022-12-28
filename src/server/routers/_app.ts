@@ -2,6 +2,7 @@
  * This file contains the root router of your tRPC-backend
  */
 import { router, publicProcedure } from '../trpc';
+import { chatRouter } from './chat';
 import { pokemonRouter } from './pokemon';
 import { postRouter } from './post';
 import { observable } from '@trpc/server/observable';
@@ -12,6 +13,7 @@ export const appRouter = router({
 
   post: postRouter,
   pokemon: pokemonRouter,
+  chat: chatRouter,
 
   randomNumber: publicProcedure.subscription(() => {
     return observable<number>((emit) => {

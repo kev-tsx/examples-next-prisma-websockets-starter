@@ -8,10 +8,14 @@ generator client {
 datasource db {
   provider = "postgres"
   url      = env("DATABASE_URL")
-  // NOTE: When using postgresql, mysql or sqlserver, uncomment the @db.Text annotations in model Account below
-  // Further reading:
-  // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
-  // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+}
+
+model Msj {
+  id        String   @id @default(cuid())
+  text      String
+  user      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 enum PosterSource {
@@ -32,10 +36,20 @@ model Post {
 }
 
 model Pokemon {
-  id   String @id @default(cuid())
-  name String @unique
-  url  String
-  rate Int    @default(0)
+  id           Int    @id @default(autoincrement())
+  name         String @unique
+  url          String
+  votesFor     Vote[] @relation("pokemon_voted_for")
+  votesAgainst Vote[] @relation("pokemon_voted_against")
+}
+
+model Vote {
+  id                  String   @id @default(cuid())
+  createdAt           DateTime @default(now())
+  pokemonVotedFor     Pokemon  @relation(name: "pokemon_voted_for", fields: [votedFor], references: [id])
+  pokemonVotedAgainst Pokemon  @relation(name: "pokemon_voted_against", fields: [votedAgainst], references: [id])
+  votedFor            Int
+  votedAgainst        Int
 }
 
 // Necessary for Next auth
@@ -45,12 +59,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? // @db.Text
-  access_token      String? // @db.Text
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? // @db.Text
+  id_token          String? @db.Text
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -69,6 +83,7 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
+  password      String?
   emailVerified DateTime?
   image         String?
   accounts      Account[]

@@ -7,12 +7,9 @@ import Image from 'next/image';
 import { Loading } from '../components/ui/index';
 import type { RouterOutputs } from '../utils/trpc';
 
-const Home = () => {
-  // trpc.ws.onHello.useSubscription(undefined, {
-  //   onData: console.log
-  // });
-  // const mutation = trpc.hello.useMutation();
+type Voted = { voted: number; notVoted: number };
 
+const Home = () => {
   const [{ firstId, secondId }, updateIds] = useState<{ firstId: number; secondId: number }>(() => getOptionsForVote());
 
   const firstPokemon = trpc.pokemon.getById.useQuery({ id: firstId });
@@ -21,21 +18,22 @@ const Home = () => {
 
   const handleVote = (selected: number, name: string) => {
     updateIds(getOptionsForVote());
-    mutate({ id: selected, name });
-  }
+    const pokeVoted = (): Voted => selected === firstId 
+      ? { voted: firstId, notVoted: secondId } : { voted: secondId, notVoted: firstId };
+    mutate({ votedFor: pokeVoted().voted, votedAgainst: pokeVoted().notVoted });
+  };
 
   return (
     <RootLayout>
-      <h1 className="text-center">Vote</h1>
-      {/* <button onClick={() => mutation.mutate()}>Say hello</button> */}
-      <div className='flex justify-center items-center w-screen h-screen'>
+      <div className='flex flex-col justify-center items-center w-screen h-screen'>
+        <h1 className="text-center mb-5">Who's the most rounder?</h1>
         {
           !firstPokemon.data || !secondPokemon.data
             ? (
-              <>
+              <div className='flex'>
                 <Loading position='left' />
                 <Loading position='right' />
-              </>
+              </div>
             )
             : (
               <div className='border rounded flex justify-center items-center'>
@@ -53,7 +51,6 @@ const Home = () => {
 type PokemonData = { data: RouterOutputs['pokemon']['getById'] }
 
 const Pokemon: React.FC<{ pokemon: PokemonData; vote: () => void }> = ({ pokemon, vote }) => {
-  console.log({pokemon});
   return (
     <div className='flex flex-col items-center p-10'>
       <p className='capitalize'>{pokemon.data.name}</p>

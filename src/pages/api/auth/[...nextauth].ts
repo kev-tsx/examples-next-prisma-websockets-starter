@@ -1,59 +1,77 @@
-import NextAuth from 'next-auth';
-import { AppProviders } from 'next-auth/providers';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import GithubProvider from 'next-auth/providers/github';
+/* eslint-disable */
+import NextAuth, { type NextAuthOptions } from "next-auth";
+import GithubProvider from "next-auth/providers/github";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { prisma } from "../../../server/prisma";
+import Credentials from "next-auth/providers/credentials";
 
-let useMockProvider = process.env.NODE_ENV === 'test';
-const { GITHUB_CLIENT_ID, GITHUB_SECRET, NODE_ENV, APP_ENV } = process.env;
-if (
-  (NODE_ENV !== 'production' || APP_ENV === 'test') &&
-  (!GITHUB_CLIENT_ID || !GITHUB_SECRET)
-) {
-  console.log('⚠️ Using mocked GitHub auth correct credentials were not added');
-  useMockProvider = true;
-}
-const providers: AppProviders = [];
-if (useMockProvider) {
-  providers.push(
-    CredentialsProvider({
-      id: 'github',
-      name: 'Mocked GitHub',
+// import { env } from "../../../env/server.mjs";
+
+export const authOptions: NextAuthOptions = {
+  // adapter: PrismaAdapter(prisma),
+  providers: [
+    GithubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID ?? '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? '',
+    }),
+    Credentials({
+      name: 'Credentials',
+      type: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email', placeholder: 'user@email.com' },
+        name: { label: 'Name', type: 'text', placeholder: 'kev' },
+        password: { label: 'Password', type: 'password', placeholder: 'Password' },
+      },
       async authorize(credentials) {
-        if (credentials) {
-          const user = {
-            id: credentials.name,
-            name: credentials.name,
-            email: credentials.name,
-          };
+        if(!credentials) throw new Error('Credentials required');
+        const user_authed = await prisma.user.findUnique({
+          where: {
+            email: credentials.email
+          },
+          select: {
+            id: true, email: true, name: true, password: true,
+          }
+        });
+
+        if(!user_authed) {
+          const user = await prisma.user.create({
+            data: {
+              email: credentials.email, name: credentials.name, password: credentials.password
+            },
+            select: {
+              id: true, email: true, name: true,
+            }
+          });
+
           return user;
         }
-        return null;
-      },
-      credentials: {
-        name: { type: 'test' },
-      },
-    }),
-  );
-} else {
-  if (!GITHUB_CLIENT_ID || !GITHUB_SECRET) {
-    throw new Error('GITHUB_CLIENT_ID and GITHUB_SECRET must be set');
-  }
-  providers.push(
-    GithubProvider({
-      clientId: GITHUB_CLIENT_ID,
-      clientSecret: GITHUB_SECRET,
-      profile(profile) {
-        return {
-          id: profile.id,
-          name: profile.login,
-          email: profile.email,
-          image: profile.avatar_url,
-        } as any;
-      },
-    }),
-  );
-}
-export default NextAuth({
-  // Configure one or more authentication providers
-  providers,
-});
+        if(user_authed.password !== credentials?.password) throw new Error('Wrong credentials!')
+        return { id: user_authed.id, email: user_authed.email, name: user_authed.name };
+      }
+    })
+  ],
+  callbacks: {
+    jwt({ token, ...rest }) {
+      console.log({JWT: { token, user: rest.user, userToken: token.user }})
+      if(rest.user) {
+        console.log({ areUser: rest.user })
+      token.user = rest.user
+      }
+      return token;
+    },
+    session({ session, token, user }) {
+      session.user = token.user;
+      console.log({Session: { session, token, user }});
+      return session;
+    },
+  },
+  pages: {
+    signIn: '/auth/login'
+  },
+  session: {
+    strategy: 'jwt',
+  },
+  secret: 'secret'
+};
+
+export default NextAuth(authOptions);

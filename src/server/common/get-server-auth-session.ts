@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { type GetServerSidePropsContext } from "next";
 import { unstable_getServerSession } from "next-auth";
 

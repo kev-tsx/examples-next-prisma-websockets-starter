@@ -6,7 +6,7 @@ export const Navbar = () => {
   const session = useSession();
 
   return (
-    <nav className="flex justify-between items-center px-4 w-full bg-red-400 h-9 rounded-b shadow-md">
+    <nav className="flex justify-between items-center px-4 bg-red-400 rounded-b shadow-md w-screen h-10">
       <Link href="/">Home</Link>
       <div>
         <Link href="/dashboard" className='mr-4'>Dashboard</Link>
@@ -21,7 +21,7 @@ export const Navbar = () => {
                 <div>Register</div>
               </>
             ) : (
-              <button 
+              <button
                 className="bg-slate-400 p-1 rounded"
                 onClick={() => signOut()}
               >Logout</button>

@@ -16,8 +16,9 @@
     "jsx": "preserve",
     "incremental": true,
     "paths": {
-      "@ui": ["./src/components/ui/index.ts"]
-    }
+      "@ui": ["./src/components/ui/index.ts"],
+      "@*": ["./src/*"],
+    },
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]

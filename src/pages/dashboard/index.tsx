@@ -1,4 +1,3 @@
-import React from 'react';
 import { RootLayout } from '../../components';
 import { trpc } from '../../utils/trpc';
 import Image from 'next/image';
@@ -14,39 +13,27 @@ const Dashboard = () => {
   // });
   return (
     <RootLayout>
-      <div className="bg-dark-500 h-screen flex flex-col items-center">
+      <div className="bg-dark-500 h-screen flex flex-col items-center overflow-auto">
         <h1>Dashboard</h1>
         <div>
           {
-            /* eslint-disable */
-            // res.data?.map(p => (
-            //   <div key={p.id}>
-            //     <div className='border mb-2'>{p.name}
-            //       {
-            //         p.vote.map(v => (
-            //           <div className='flex'>
-            //             <p className='mr-4'>{v.votedFor}</p>
-            //             <p>{v.votedAgainst}</p>
-            //           </div>
-            //         ))
-            //       }
-            //     </div>
-            //   </div>
-            // ))
-          }
-        </div>
-        <div className="">
-          {
-            /* eslint-disable */
-            res.data?.map(p => (
-              <div key={p.id} className='flex justify-evenly border-y border-x w-screen items-center'>
-                <div className='mr-2 border-r w-[50%] flex items-center'>
-                  <Image src={p.url} alt='poke' width={100} height={100} priority />
-                  <Link href={`/pokemon/${p.id}`} className='capitalize hover:text-blue-500 transition-all'>{p.name}</Link>
-                </div>
-                <p className='w-[30%]'>{p._count.votesFor} votes</p>
-              </div>
-            ))
+            res.data?.map(p => {
+              if (p._count.votesFor > 0) {
+
+                return (
+                  <div key={p.id} className='flex justify-evenly border-y border-x w-screen items-center'>
+                    <div className='mr-2 border-r w-[50%] flex items-center'>
+                      <Image src={p.url} alt='poke' width={100} height={100} priority />
+                      <Link href={`/pokemon/${p.id}`} className='capitalize hover:text-blue-500 transition-all'>{p.name}</Link>
+                    </div>
+                    <p className='w-[30%]'>{
+                      p.votesFor.reduce((prev, current) => prev + current.count, 0)
+                    } votes</p>
+                  </div>
+                )
+              }
+            }
+            )
           }
         </div>
       </div>

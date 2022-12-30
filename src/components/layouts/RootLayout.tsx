@@ -1,9 +1,11 @@
 import Head from 'next/head';
 import { Navbar } from '@ui';
 
-export const RootLayout: React.FC<{
+interface Props {
   children: JSX.Element | JSX.Element[];
-}> = ({ children }) => {
+}
+
+export const RootLayout: React.FC<Props > = ({ children }) => {
   return (
     <>
       <Head>
@@ -12,8 +14,9 @@ export const RootLayout: React.FC<{
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="bg-gray-700 text-white h-screen overflow-hidden">
-        <Navbar />
+      <Navbar />
+
+      <main className="bg-slate-600 text-white h-screen overflow-hidden">
         {children}
       </main>
     </>

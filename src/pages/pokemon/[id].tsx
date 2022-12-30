@@ -10,29 +10,66 @@ import { RootLayout } from '../../components';
 import Image from 'next/image';
 import clsx from 'clsx';
 
-const Pokemon: React.FC<InferGetStaticPropsType<typeof getStaticProps>> = ({ id }) => {  
-  const res = trpc.pokemon.getById.useQuery({ id: Number(id) });
+const Pokemon: React.FC<InferGetStaticPropsType<typeof getStaticProps>> = ({ id }) => {
+  const res = trpc.pokemon.getById.useQuery({ id: Number(id) }, {
+    // onSuccess: p => {
+    //   const votes = p.votesFor.map(v => {
+    //     return {
+    //       vs: {
+
+    //       }
+    //     }
+    //   })
+    // }
+  });
 
   return (
     <RootLayout>
-      <div className='h-screen grid grid-cols-2'>
-        {
-          res.data?.votesFor.map(v => (
-            <div key={v.id} className='flex justify-center items-center border'>
-              <div className="flex flex-col items-center">
-                <div className={clsx({ "text-red-500": v.votedFor > v.votedAgainst })}>{v.pokemonVotedFor.name}</div>
-                <Image src={v.pokemonVotedFor.url} width={200} height={200} alt='pokeF' priority />
-                <div>{v.votedFor} votes</div>
-              </div>
-              <div>vs</div>
-              <div className="flex flex-col items-center">
-                <div className={clsx({ "text-red-500": v.votedFor < v.votedAgainst })}>{v.pokemonVotedAgainst.name}</div>
-                <Image src={v.pokemonVotedAgainst.url} width={200} height={200} alt='pokeA' priority />
-                <div>{v.votedAgainst} votes</div>
-              </div>
-            </div>
-          ))
-        }
+      <div className='h-screen flex flex-col justify-evenly'>
+        <div>
+          <h1 className='text-center text-xl'>Wins</h1>
+          <div className='flex'>
+            {res.data?.votesFor.map(v => {
+              return (
+                <div key={v.id} className='flex justify-center items-center border'>
+                  <div className="flex flex-col items-center">
+                    <div className={clsx({ "text-red-500": v.votedFor > v.votedAgainst })}>{v.pokemonVotedFor.name}</div>
+                    <Image src={v.pokemonVotedFor.url} width={200} height={200} alt='pokeF' priority />
+                    <div>{v.count} votes</div>
+                  </div>
+                  <div>vs</div>
+                  <div className="flex flex-col items-center">
+                    <div className={clsx({ "text-red-500": v.votedFor < v.votedAgainst })}>{v.pokemonVotedAgainst.name}</div>
+                    <Image src={v.pokemonVotedAgainst.url} width={200} height={200} alt='pokeA' priority />
+                    <div>{0} votes</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <div>
+          <h1 className='text-center text-xl'>Lost</h1>
+          <div className='flex'>
+            {res.data?.votesAgainst.map(v => {
+              return (
+                <div key={v.id} className='flex justify-center items-center border'>
+                  <div className="flex flex-col items-center">
+                    <div className={clsx({ "text-red-500": v.votedFor > v.votedAgainst })}>{v.pokemonVotedAgainst.name}</div>
+                    <Image src={v.pokemonVotedAgainst.url} width={200} height={200} alt='pokeF' priority />
+                    <div>{0} votes</div>
+                  </div>
+                  <div>vs</div>
+                  <div className="flex flex-col items-center">
+                    <div className={clsx({ "text-red-500": v.votedFor < v.votedAgainst })}>{v.pokemonVotedFor.name}</div>
+                    <Image src={v.pokemonVotedFor.url} width={200} height={200} alt='pokeA' priority />
+                    <div>{v.count} votes</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
     </RootLayout>
   )

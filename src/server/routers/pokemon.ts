@@ -1,10 +1,10 @@
 import { publicProcedure, router } from '../trpc';
-import { PokemonClient } from 'pokenode-ts';
 import { z } from 'zod';
 import { prisma } from '../prisma';
 import EventEmitter from 'events';
 import type { Pokemon } from '@prisma/client';
 import { observable } from '@trpc/server/observable';
+import { TRPCError } from '@trpc/server';
 
 interface MyEvents {
   vote: (data: Pokemon) => void;
@@ -25,11 +25,9 @@ class MyEventEmitter extends EventEmitter {}
 // In a real app, you'd probably use Redis or something
 const ee = new MyEventEmitter();
 
-const api = new PokemonClient();
-
 export const pokemonRouter = router({
   get: publicProcedure.query(async () => {
-    const pokemons = await api.listPokemons(100, 100);
+    const pokemons = await prisma.pokemon.findMany({ orderBy: { id: 'desc' } });
     return pokemons;
   }),
   getById: publicProcedure
@@ -40,28 +38,19 @@ export const pokemonRouter = router({
         include: {
           _count: true,
           votesFor: {
-            distinct: ['votedAgainst'],
+            // distinct: ['votedAgainst'],
+            include: { pokemonVotedFor: true, pokemonVotedAgainst: true },
+          },
+          votesAgainst: {
+            // distinct: ['votedAgainst'],
             include: { pokemonVotedFor: true, pokemonVotedAgainst: true },
           },
         },
       });
-      // pokemonInDB?.votesFor.map(p => p.pokemonV)
-      if (pokemonInDB)
-        return {
-          id: pokemonInDB.id,
-          name: pokemonInDB.name,
-          url: pokemonInDB.url,
-          votesFor: pokemonInDB.votesFor,
-          _count: pokemonInDB._count,
-        };
-      const pokemon = await api.getPokemonById(input.id);
-      return {
-        id: pokemon.id,
-        name: pokemon.name,
-        url: pokemon.sprites.front_default,
-        votesFor: [],
-        _count: { vote: 0 },
-      };
+
+      if(!pokemonInDB) throw new TRPCError({ code: 'NOT_FOUND' });
+      
+      return pokemonInDB;
     }),
   setVotes: publicProcedure
     .input(z.object({ votedFor: z.number(), votedAgainst: z.number() }))
@@ -70,72 +59,47 @@ export const pokemonRouter = router({
       const pokemon = await prisma.pokemon.findUnique({
         where: { id: input.votedFor },
       });
-      if (pokemon) {
-        // {
-        //   // const voteExist = await prisma.vote.findFirst({
-        // //   where: {
-        // //     ...input
-        // //   },
-        // // })
-        // // if(voteExist) {
-        // //   await prisma.pokemon.update({
-        // //     where: { id: input.votedFor },
-        // //     data: {
 
-        // //     }
-        // //   });
-        // // }
-        // }
-        await prisma.pokemon.update({
-          where: { id: input.votedFor },
-          data: {
-            ...input
-          }
-        });
-        return { success: true };
-      }
-      const { name, sprites: { front_default }} = await api.getPokemonById(input.votedFor);
-      
-      const poke = await prisma.pokemon.create({
-        data: {
-          id: input.votedFor,
-          name,
-          url: front_default ?? '',
-          votesFor: { create: { ...input } },
-        },
-        include: { votesFor: true },
-      });
+      if (!pokemon) throw new TRPCError({ code: 'NOT_FOUND' });
 
-      return { success: true, vote: poke.votesFor, pokemon };
-      // const pokemon_created = await prisma.pokemon.findFirst({
-      //   where: { name: input.name },
-      // });
-      // if (pokemon_created) {
-      //   const pokemon = await prisma.pokemon.update({
-      //     where: { id: pokemon_created.id },
-      //     data: { rate: pokemon_created.rate + 1 },
-      //   });
-
-      //   ee.emit('vote', pokemon);
-
-      //   return pokemon;
-      // }
-      // const poke = await api.getPokemonById(input.votedFor);
-
-      // const pokemon = await prisma.pokemon.create({
-      //   data: {
-      //     id: String(input.id),
-      //     name: poke.name,
-      //     url: poke.sprites.front_default ?? '',
-      //     rate: 1,
+      const voteExist = await prisma.vote.findFirst({ where: { ...input } });
+      // const voteExist = await prisma.vote.findMany({
+      //   where: {
+      //     ...input
       //   },
       // });
 
-      // ee.emit('vote', pokemon);
-      // return pokemon;
+      if (voteExist) {        
+        await prisma.vote.update({
+          where: { id: voteExist.id },
+          data: {
+            count: voteExist.count + 1
+          },
+        })
+        return { success: true };
+      }
+
+      await prisma.vote.create({
+        data: {
+          ...input,
+        },
+      });
+
+      return { success: true };
+
+      // const poke = await prisma.pokemon.update({
+      //   where: { id: input.votedFor },
+      //   data: {
+      //     votesFor: { create: { votedAgainst: input.votedAgainst } },
+      //     // votesAgainst: { create: { votedFor: input.votedFor } },
+      //   },
+      //   include: { votesFor: true, votesAgainst: true, _count: true }
+      // });
+
+      // return { success: true, vote: poke.votesFor, pokemon: poke };
     }),
   getVotes: publicProcedure.query(async () => {
-    const votes = await prisma.pokemon.findMany({
+    const votes = await prisma.pokemon.findMany({      
       orderBy: {
         votesFor: { _count: 'desc' },
       },

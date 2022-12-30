@@ -36,7 +36,7 @@ model Post {
 }
 
 model Pokemon {
-  id           Int    @id @default(autoincrement())
+  id           Int    @id
   name         String @unique
   url          String
   votesFor     Vote[] @relation("pokemon_voted_for")
@@ -46,10 +46,14 @@ model Pokemon {
 model Vote {
   id                  String   @id @default(cuid())
   createdAt           DateTime @default(now())
-  pokemonVotedFor     Pokemon  @relation(name: "pokemon_voted_for", fields: [votedFor], references: [id])
-  pokemonVotedAgainst Pokemon  @relation(name: "pokemon_voted_against", fields: [votedAgainst], references: [id])
+  pokemonVotedFor     Pokemon  @relation(name: "pokemon_voted_for", fields: [votedFor], references: [id], onDelete: Cascade)
+  pokemonVotedAgainst Pokemon  @relation(name: "pokemon_voted_against", fields: [votedAgainst], references: [id], onDelete: Cascade)
   votedFor            Int
   votedAgainst        Int
+  count               Int      @default(1)
+
+  @@index([votedFor, votedAgainst])
+  @@map("votes")
 }
 
 // Necessary for Next auth

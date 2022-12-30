@@ -52,16 +52,13 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     jwt({ token, ...rest }) {
-      console.log({JWT: { token, user: rest.user, userToken: token.user }})
       if(rest.user) {
-        console.log({ areUser: rest.user })
-      token.user = rest.user
+        token.user = rest.user
       }
       return token;
     },
     session({ session, token, user }) {
       session.user = token.user;
-      console.log({Session: { session, token, user }});
       return session;
     },
   },

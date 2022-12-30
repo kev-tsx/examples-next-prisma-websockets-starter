@@ -10,6 +10,11 @@ module.exports = {
         hostname: '**.com',
         pathname: '/PokeAPI/sprites/master/sprites/pokemon/**',
       },
+      {
+        protocol: 'https',
+        hostname: '**.co',
+        pathname: '/api/v2/pokemon/**',
+      },
     ],
   },
   serverRuntimeConfig: {
